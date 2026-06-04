@@ -21,19 +21,6 @@
 - **💱 Multi-Currency**: Switch between your preferred currencies directly from the settings.
 - **📤 Data Export**: Easily export your entire financial history as a JSON file for safekeeping.
 
----
-
-## 📸 Screenshots
-
-*(Replace with actual screenshots of your application)*
-<div align="center">
-  <img src="https://via.placeholder.com/250x500?text=Dashboard" width="200" alt="Dashboard Screen">
-  <img src="https://via.placeholder.com/250x500?text=Analytics" width="200" alt="Analytics Screen">
-  <img src="https://via.placeholder.com/250x500?text=Custom+Categories" width="200" alt="Categories Screen">
-  <img src="https://via.placeholder.com/250x500?text=Budgets" width="200" alt="Budgets Screen">
-</div>
-
----
 
 ## 🛠️ Tech Stack & Packages
 
