@@ -1,0 +1,7 @@
+# Tell GitHub's Linguist to ignore these generated folders for language statistics
+ios/* linguist-vendored
+android/* linguist-vendored
+windows/* linguist-vendored
+macos/* linguist-vendored
+linux/* linguist-vendored
+web/* linguist-vendored
