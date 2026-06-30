@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import '../widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
 import '../../providers/expense_provider.dart';
 import '../widgets/expense_tile.dart';
+import '../widgets/category_filter_sheet.dart';
+import '../controllers/expense_history_controller.dart';
+import '../widgets/empty_state_widget.dart';
 
 class ExpenseHistoryScreen extends StatefulWidget {
   const ExpenseHistoryScreen({super.key});
@@ -10,11 +14,17 @@ class ExpenseHistoryScreen extends StatefulWidget {
 }
 
 class _ExpenseHistoryScreenState extends State<ExpenseHistoryScreen> {
-  final _searchCtrl = TextEditingController();
+  late ExpenseHistoryController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ExpenseHistoryController();
+  }
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -38,22 +48,17 @@ class _ExpenseHistoryScreenState extends State<ExpenseHistoryScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: ep.setSearch,
-              decoration: InputDecoration(
-                hintText: 'Search transactions...',
-                prefixIcon: const Icon(Icons.search_rounded),
+            child: CustomTextField(
+              controller: _controller.searchCtrl,
+              onChanged: (val) => _controller.onSearchChanged(val, ep),
+              hintText: 'Search transactions...',
+              prefixIcon: Icons.search_rounded,
                 suffixIcon: ep.searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear_rounded),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          ep.setSearch('');
-                        },
+                        onPressed: () => _controller.clearSearch(ep),
                       )
                     : null,
-              ),
             ),
           ),
           if (ep.filterCategory != null)
@@ -88,29 +93,20 @@ class _ExpenseHistoryScreenState extends State<ExpenseHistoryScreen> {
             ),
           Expanded(
             child: filtered.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('🔍', style: TextStyle(fontSize: 48)),
-                        const SizedBox(height: 12),
-                        Text('No transactions found',
-                            style: TextStyle(
-                                color: cs.onSurface.withValues(alpha: 0.5))),
-                        if (ep.searchQuery.isNotEmpty ||
-                            ep.filterCategory != null)
-                          TextButton(
-                            onPressed: ep.clearFilters,
-                            child: const Text('Clear filters'),
-                          ),
-                      ],
-                    ),
+                ? EmptyStateWidget(
+                    icon: Icons.search_off_rounded,
+                    title: 'No transactions found',
+                    subtitle: 'Try adjusting your search or filters',
+                    buttonText: (ep.searchQuery.isNotEmpty || ep.filterCategory != null)
+                        ? 'Clear filters'
+                        : null,
+                    buttonIcon: Icons.clear_all_rounded,
+                    onAction: ep.clearFilters,
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: filtered.length,
-                    itemBuilder: (_, i) =>
-                        ExpenseTile(expense: filtered[i]),
+                    itemBuilder: (_, i) => ExpenseTile(expense: filtered[i]),
                   ),
           ),
         ],
@@ -119,76 +115,10 @@ class _ExpenseHistoryScreenState extends State<ExpenseHistoryScreen> {
   }
 
   void _showFilter(BuildContext context) {
-    final ep = context.read<ExpenseProvider>();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Filter by Category',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: context.watch<ExpenseProvider>().categories.map((c) {
-                final selected = ep.filterCategory == c.name;
-                return GestureDetector(
-                  onTap: () {
-                    ep.setFilterCategory(selected ? null : c.name);
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(c.icon, size: 14, color: selected ? Colors.white : null),
-                        const SizedBox(width: 6),
-                        Text(
-                          c.name,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: selected ? Colors.white : null),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () {
-                ep.clearFilters();
-                Navigator.pop(context);
-              },
-              child: const Text('Clear All Filters'),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => const CategoryFilterSheet(),
     );
   }
 }

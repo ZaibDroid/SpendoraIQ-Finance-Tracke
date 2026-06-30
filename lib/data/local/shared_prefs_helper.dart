@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/expense_model.dart';
 import '../models/budget_model.dart';
 import '../models/category_model.dart';
+import 'generic_list_storage.dart';
 
 class SharedPrefsHelper {
   static const String expenseKey = 'expenses';
@@ -12,103 +12,58 @@ class SharedPrefsHelper {
   
   static late SharedPreferences _prefs;
 
+  // Generic Storage Instances
+  static final _categoryStorage = GenericListStorage<CategoryModel>(
+    key: categoryKey,
+    fromJson: (json) => CategoryModel.fromJson(json),
+    toJson: (cat) => cat.toJson(),
+  );
+
+  static final _expenseStorage = GenericListStorage<ExpenseModel>(
+    key: expenseKey,
+    fromJson: (json) => ExpenseModel.fromJson(json),
+    toJson: (exp) => exp.toJson(),
+  );
+
+  static final _budgetStorage = GenericListStorage<BudgetModel>(
+    key: budgetKey,
+    fromJson: (json) => BudgetModel.fromJson(json),
+    toJson: (bud) => bud.toJson(),
+  );
+
   static Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
   }
 
-
   // --- Categories ---
-  static List<CategoryModel> getAllCategories() {
-    final String? jsonStr = _prefs.getString(categoryKey);
-    if (jsonStr == null) return [];
-    try {
-      final List<dynamic> jsonList = jsonDecode(jsonStr);
-      return jsonList.map((e) => CategoryModel.fromJson(e)).toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  static Future<void> saveAllCategories(List<CategoryModel> categories) async {
-    final String jsonStr = jsonEncode(categories.map((e) => e.toJson()).toList());
-    await _prefs.setString(categoryKey, jsonStr);
-  }
+  static List<CategoryModel> getAllCategories() => _categoryStorage.getAll(_prefs);
+  
+  static Future<void> saveAllCategories(List<CategoryModel> categories) => 
+      _categoryStorage.saveAll(_prefs, categories);
 
   // --- Expenses ---
   static List<ExpenseModel> getAllExpenses() {
-    final String? jsonStr = _prefs.getString(expenseKey);
-    if (jsonStr == null) return [];
-    
-    try {
-      final List<dynamic> jsonList = jsonDecode(jsonStr);
-      final expenses = jsonList.map((e) => ExpenseModel.fromJson(e)).toList();
-      expenses.sort((a, b) => b.date.compareTo(a.date));
-      return expenses;
-    } catch (_) {
-      return [];
-    }
-  }
-  
-  static Future<void> _saveAllExpenses(List<ExpenseModel> expenses) async {
-    final String jsonStr = jsonEncode(expenses.map((e) => e.toJson()).toList());
-    await _prefs.setString(expenseKey, jsonStr);
+    final expenses = _expenseStorage.getAll(_prefs);
+    expenses.sort((a, b) => b.date.compareTo(a.date));
+    return expenses;
   }
 
-  static Future<void> addExpense(ExpenseModel expense) async {
-    final expenses = getAllExpenses();
-    final index = expenses.indexWhere((e) => e.id == expense.id);
-    if (index >= 0) {
-      expenses[index] = expense;
-    } else {
-      expenses.add(expense);
-    }
-    await _saveAllExpenses(expenses);
-  }
+  static Future<void> addExpense(ExpenseModel expense) => 
+      _expenseStorage.saveItem(_prefs, expense, (e) => e.id == expense.id);
 
-  static Future<void> updateExpense(ExpenseModel expense) async {
-    await addExpense(expense);
-  }
+  static Future<void> updateExpense(ExpenseModel expense) => addExpense(expense);
 
-  static Future<void> deleteExpense(String id) async {
-    final expenses = getAllExpenses();
-    expenses.removeWhere((e) => e.id == id);
-    await _saveAllExpenses(expenses);
-  }
+  static Future<void> deleteExpense(String id) => 
+      _expenseStorage.deleteItem(_prefs, (e) => e.id == id);
 
   // --- Budgets ---
-  static List<BudgetModel> getAllBudgets() {
-    final String? jsonStr = _prefs.getString(budgetKey);
-    if (jsonStr == null) return [];
-    
-    try {
-      final List<dynamic> jsonList = jsonDecode(jsonStr);
-      return jsonList.map((e) => BudgetModel.fromJson(e)).toList();
-    } catch (_) {
-      return [];
-    }
-  }
+  static List<BudgetModel> getAllBudgets() => _budgetStorage.getAll(_prefs);
 
-  static Future<void> _saveAllBudgets(List<BudgetModel> budgets) async {
-    final String jsonStr = jsonEncode(budgets.map((b) => b.toJson()).toList());
-    await _prefs.setString(budgetKey, jsonStr);
-  }
+  static Future<void> saveBudget(BudgetModel budget) => 
+      _budgetStorage.saveItem(_prefs, budget, (b) => b.id == budget.id);
 
-  static Future<void> saveBudget(BudgetModel budget) async {
-    final budgets = getAllBudgets();
-    final index = budgets.indexWhere((b) => b.id == budget.id);
-    if (index >= 0) {
-      budgets[index] = budget;
-    } else {
-      budgets.add(budget);
-    }
-    await _saveAllBudgets(budgets);
-  }
-
-  static Future<void> deleteBudget(String id) async {
-    final budgets = getAllBudgets();
-    budgets.removeWhere((b) => b.id == id);
-    await _saveAllBudgets(budgets);
-  }
+  static Future<void> deleteBudget(String id) => 
+      _budgetStorage.deleteItem(_prefs, (b) => b.id == id);
 
   // --- Settings ---
   static Future<void> saveSetting(String key, dynamic value) async {
@@ -166,13 +121,13 @@ class SharedPrefsHelper {
       final expenses = (data['expenses'] as List)
           .map((e) => ExpenseModel.fromJson(e))
           .toList();
-      await _saveAllExpenses(expenses);
+      await _expenseStorage.saveAll(_prefs, expenses);
     }
     if (data['budgets'] != null) {
       final budgets = (data['budgets'] as List)
           .map((b) => BudgetModel.fromJson(b))
           .toList();
-      await _saveAllBudgets(budgets);
+      await _budgetStorage.saveAll(_prefs, budgets);
     }
   }
 }
